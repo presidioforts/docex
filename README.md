@@ -180,4 +180,72 @@ For issues and questions:
 
 ## License
 
-MIT License - See LICENSE file for details 
+MIT License - See LICENSE file for details
+
+## Supported Models
+
+You can use this platform with various pre-trained sentence transformer models from Hugging Face. Here are some recommended models:
+
+1. **all-MiniLM-L6-v2** (Default)
+   - Fast and efficient
+   - 384 dimensions
+   - Good balance of speed and performance
+   - Ideal for: General purpose sentence embeddings
+
+2. **all-mpnet-base-v2**
+   - Higher quality embeddings
+   - 768 dimensions
+   - Better performance but slower
+   - Ideal for: When accuracy is critical
+
+3. **paraphrase-multilingual-MiniLM-L12-v2**
+   - Multilingual support
+   - 384 dimensions
+   - Works with 50+ languages
+   - Ideal for: Multilingual applications
+
+4. **multi-qa-MiniLM-L6-cos-v1**
+   - Optimized for question-answering
+   - 384 dimensions
+   - Good for semantic search
+   - Ideal for: QA and search applications
+
+### Using Different Models
+
+To use a different model:
+
+1. In the Streamlit UI:
+   - Select your desired model from the dropdown
+   - The platform will automatically download and use the selected model
+
+2. Via API:
+```python
+from model_manager import ModelManager
+
+# Initialize with your chosen model
+model_manager = ModelManager(model_name="all-mpnet-base-v2")
+
+# Train as usual
+model_manager.train(train_data=your_data)
+```
+
+### Model Selection Guidelines
+
+Choose your model based on your specific needs:
+
+1. **Speed vs Quality**
+   - MiniLM models: Faster, smaller, good for production
+   - MPNet models: Higher quality, larger, better for accuracy-critical tasks
+
+2. **Language Support**
+   - Multilingual models: For non-English or multi-language tasks
+   - English-only models: Better performance if you only need English
+
+3. **Resource Constraints**
+   - Consider model size and memory requirements
+   - Larger models need more GPU memory for training
+
+4. **Domain Specificity**
+   - QA models: Better for question-answering tasks
+   - Paraphrase models: Better for similarity tasks
+   - General models: Good for most use cases 
