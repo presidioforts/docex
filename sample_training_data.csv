@@ -1,0 +1,21 @@
+text1,text2,similarity
+The movie was great,The film was excellent,0.9
+I love pizza,I enjoy eating pizza,0.8
+The weather is nice today,It's a beautiful day outside,0.85
+The cat is sleeping,The dog is running,0.3
+I need to study,I have to prepare for the exam,0.75
+This book is interesting,This novel is fascinating,0.9
+The car is red,The automobile is crimson,0.95
+I am tired,I need some rest,0.8
+The computer is broken,The laptop isn't working,0.7
+Python is a programming language,Java is a coding language,0.6
+The sun is shining,It's raining outside,0.1
+I like coffee,I hate coffee,0.2
+The house is big,The mansion is enormous,0.8
+She is happy,She is feeling joyful,0.9
+The train is late,The bus is on time,0.3
+The food tastes good,The meal is delicious,0.85
+I work from home,I telecommute,0.95
+The meeting starts at 9,The conference begins at 9 AM,0.9
+The phone is new,The device was just purchased,0.8
+Water is boiling,The liquid is at 100 degrees Celsius,0.7 
