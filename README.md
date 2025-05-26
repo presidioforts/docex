@@ -1,5 +1,5 @@
 # Sentence Transformer Training Platform
-
+# Open AI Integration with backend for ReactjsUI
 A user-friendly platform for training and fine-tuning sentence transformer models using Streamlit UI. This platform allows you to easily train custom sentence transformer models for your specific use case.
 
 ## 🌟 Features

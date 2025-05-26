@@ -5,6 +5,24 @@ This app provides a user-friendly interface for:
 2. Configuring model parameters
 3. Training the model
 4. Evaluating and saving the results
+
+Data Requirements:
+- CSV file with columns: 'text1', 'text2', 'similarity'
+- text1, text2: Pairs of sentences to compare
+- similarity: Float value between 0 and 1 indicating sentence similarity
+  - 1.0: Sentences are semantically identical
+  - 0.0: Sentences are completely different
+
+Example CSV format:
+text1,text2,similarity
+"The cat is sleeping","A cat naps on the bed",0.9
+"I love pizza","The weather is nice",0.1
+
+Training Process:
+1. Model loads pre-trained weights
+2. Fine-tunes on your specific sentence pairs
+3. Saves checkpoints during training
+4. Produces final model optimized for your domain
 """
 
 import streamlit as st
@@ -47,7 +65,8 @@ st.sidebar.title("Model Configuration")
 model_name = st.sidebar.selectbox(
     "Select Model",
     options=list(model_manager.get_available_models().keys()),
-    index=0  # Default to first model in the list
+    index=0,  # Default to first model in the list
+    help="Choose a pre-trained model to fine-tune. Different models have different trade-offs between speed and accuracy."
 )
 
 # Handle model switching when user selects a different model
@@ -68,9 +87,19 @@ st.title("Sentence Transformer Training")
 
 # Section 1: Data Upload
 st.header("1. Upload Training Data")
+st.markdown("""
+### Data Format Requirements:
+- CSV file with three columns: `text1`, `text2`, `similarity`
+- `text1` and `text2`: Pairs of sentences to compare
+- `similarity`: Score between 0 and 1
+  - 1.0 means sentences are semantically identical
+  - 0.0 means completely different meanings
+""")
+
 uploaded_file = st.file_uploader(
     "Upload your training data (CSV)", 
-    type=['csv']  # Only allow CSV files
+    type=['csv'],  # Only allow CSV files
+    help="Upload a CSV file containing sentence pairs and their similarity scores"
 )
 
 # Handle file upload and data validation
@@ -78,9 +107,31 @@ if uploaded_file is not None:
     try:
         # Read and display the uploaded CSV file
         df = pd.read_csv(uploaded_file)
-        st.session_state.training_data = df
-        st.success("Data uploaded successfully!")
-        st.dataframe(df.head())  # Show first few rows of the data
+        
+        # Validate required columns
+        required_columns = ['text1', 'text2', 'similarity']
+        if not all(col in df.columns for col in required_columns):
+            st.error("CSV must contain columns: 'text1', 'text2', 'similarity'")
+        # Validate similarity scores
+        elif not df['similarity'].between(0, 1).all():
+            st.error("Similarity scores must be between 0 and 1")
+        else:
+            st.session_state.training_data = df
+            st.success("Data uploaded successfully!")
+            st.markdown("### Preview of Training Data:")
+            st.dataframe(df.head())  # Show first few rows of the data
+            
+            # Display dataset statistics
+            st.markdown("### Dataset Statistics:")
+            st.write(f"- Number of sentence pairs: {len(df)}")
+            st.write(f"- Average similarity score: {df['similarity'].mean():.2f}")
+            st.write(f"- Similarity score distribution:")
+            hist_data = np.histogram(df['similarity'], bins=10, range=(0,1))
+            st.bar_chart(pd.DataFrame({
+                'Similarity Score': hist_data[1][:-1],
+                'Count': hist_data[0]
+            }).set_index('Similarity Score'))
+            
     except Exception as e:
         st.error(f"Error reading file: {str(e)}")
 
@@ -88,6 +139,15 @@ if uploaded_file is not None:
 # Only show if training data has been uploaded
 if st.session_state.training_data is not None:
     st.header("2. Configure Training")
+    
+    st.markdown("""
+    ### Parameter Guidelines:
+    - **Batch Size**: Larger values use more memory but train faster
+    - **Epochs**: More epochs may improve results but take longer
+    - **Learning Rate**: Lower values are more stable but train slower
+    - **Warmup Steps**: Helps stabilize early training
+    - **Evaluation Steps**: How often to evaluate model during training
+    """)
     
     # Split configuration into two columns for better layout
     col1, col2 = st.columns(2)
@@ -99,14 +159,14 @@ if st.session_state.training_data is not None:
             min_value=1,
             max_value=128,
             value=16,
-            help="Number of samples processed before model is updated"
+            help="Number of samples processed before model is updated. Larger values use more memory but train faster."
         )
         epochs = st.number_input(
             "Number of Epochs",
             min_value=1,
             max_value=100,
             value=3,
-            help="Number of complete passes through the training dataset"
+            help="Number of complete passes through the training dataset. More epochs may improve results but take longer."
         )
         learning_rate = st.number_input(
             "Learning Rate",
@@ -114,7 +174,7 @@ if st.session_state.training_data is not None:
             max_value=1e-2,
             value=2e-5,
             format="%e",
-            help="Step size for model parameter updates"
+            help="Step size for model parameter updates. Lower values are more stable but train slower."
         )
     
     with col2:
@@ -124,14 +184,14 @@ if st.session_state.training_data is not None:
             min_value=0,
             max_value=1000,
             value=100,
-            help="Number of steps for learning rate warmup"
+            help="Number of steps for learning rate warmup. Helps stabilize early training."
         )
         evaluation_steps = st.number_input(
             "Evaluation Steps",
             min_value=100,
             max_value=5000,
             value=1000,
-            help="Frequency of model evaluation during training"
+            help="How often to evaluate model during training. Lower values give more frequent updates but slow training."
         )
 
     # Create directory for saving model checkpoints and final model
@@ -153,11 +213,12 @@ if st.session_state.training_data is not None:
             # Create data loader for batch processing
             train_dataloader = DataLoader(
                 train_examples,
-                shuffle=True,
+                shuffle=True,  # Shuffle data for better training
                 batch_size=batch_size
             )
             
             # Initialize loss function for training
+            # CosineSimilarityLoss is used for sentence similarity tasks
             train_loss = losses.CosineSimilarityLoss(model=st.session_state.model)
             
             # Setup progress tracking
@@ -200,8 +261,16 @@ st.info(f"Current Status: {st.session_state.training_status}")
 if st.session_state.training_status == "Training Completed":
     st.header("4. Model Evaluation")
     
-    # TODO: Add evaluation metrics and visualization
-    st.write("Evaluation metrics will be displayed here")
+    st.markdown("""
+    ### Model Usage After Training:
+    1. Click 'Save Model' to save the trained model
+    2. The model will be saved in the 'output/final_model' directory
+    3. You can load this model later using:
+    ```python
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer('output/final_model')
+    ```
+    """)
     
     # Model saving functionality
     if st.button("Save Model"):
@@ -211,5 +280,18 @@ if st.session_state.training_status == "Training Completed":
             os.makedirs(save_path, exist_ok=True)
             st.session_state.model.save(save_path)
             st.success(f"Model saved to {save_path}")
+            
+            # Display model usage example
+            st.markdown("""
+            ### Example Usage:
+            ```python
+            # Load your saved model
+            model = SentenceTransformer('output/final_model')
+            
+            # Get embeddings for new sentences
+            sentences = ['Your sentence here']
+            embeddings = model.encode(sentences)
+            ```
+            """)
         except Exception as e:
             st.error(f"Error saving model: {str(e)}") 
